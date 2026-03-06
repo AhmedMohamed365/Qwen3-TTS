@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# =============================================================================
+# run_pipeline_kaggle.sh
+#
+# End-to-end pipeline for Kaggle:
+#   1. Filter & preprocess Speaker1 audio from train.csv
+#   2. Create train_raw.jsonl
+#   3. Encode audio codes  (prepare_data.py)
+#   4. Fine-tune the model (sft_12hz.py)
+#
+# Prerequisites:
+#   • initialize_kaggle.sh has been run (conda env ready)
+#   • Reference audio placed at REF_AUDIO path (see below)
+#   • Kaggle dataset mounted at /kaggle/input/<DATASET_NAME>
+#
+# Usage (from a Kaggle notebook cell):
+#   !bash scripts/run_pipeline_kaggle.sh
+#
+# All paths are configurable via environment variables (see defaults below).
+# =============================================================================
+set -euo pipefail
+
+# ── Configurable paths ───────────────────────────────────────────────────────
+ROOT_DIR="${ROOT_DIR:-.}"
+ENV_NAME="${ENV_NAME:-qwen_tts_env}"
+DATASET_NAME="${DATASET_NAME:-my-dataset}"
+
+CSV_PATH="${CSV_PATH:-/kaggle/input/${DATASET_NAME}/train.csv}"
+AUDIO_ROOT="${AUDIO_ROOT:-/kaggle/input/${DATASET_NAME}}"
+SPEAKER="${SPEAKER:-Speaker1}"
+
+SPEAKER_DATA_DIR="${SPEAKER_DATA_DIR:-/kaggle/working/speaker_data}"
+REF_AUDIO="${REF_AUDIO:-/kaggle/working/ref_audio/ref.wav}"
+
+RAW_JSONL="${RAW_JSONL:-/kaggle/working/train_raw.jsonl}"
+TRAIN_JSONL="${TRAIN_JSONL:-/kaggle/working/train_with_codes.jsonl}"
+OUTPUT_DIR="${OUTPUT_DIR:-/kaggle/working/output}"
+
+DEVICE="${DEVICE:-cuda:0}"
+TOKENIZER_MODEL="${TOKENIZER_MODEL:-Qwen/Qwen3-TTS-Tokenizer-12Hz}"
+INIT_MODEL="${INIT_MODEL:-Qwen/Qwen3-TTS-12Hz-1.7B-Base}"
+
+BATCH_SIZE="${BATCH_SIZE:-2}"
+LR="${LR:-2e-5}"
+EPOCHS="${EPOCHS:-3}"
+SPEAKER_NAME="${SPEAKER_NAME:-speaker1}"
+
+# ── Resolve conda python ─────────────────────────────────────────────────────
+PYTHON="$ROOT_DIR/miniconda3/envs/$ENV_NAME/bin/python"
+if [[ ! -x "$PYTHON" ]]; then
+    echo "ERROR: conda env '$ENV_NAME' not found. Run initialize_kaggle.sh first." >&2
+    exit 1
+fi
+
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
+ok()   { echo -e "${GREEN}✓ $*${NC}"; }
+info() { echo -e "${YELLOW}▶ $*${NC}"; }
+
+# ── Step 1: Filter & preprocess Speaker1 audio ──────────────────────────────
+info "Step 1 / 4 — Filtering & preprocessing audio for '${SPEAKER}' …"
+"$PYTHON" "$ROOT_DIR/scripts/prepare_speaker_data.py" \
+    --csv_path  "$CSV_PATH" \
+    --audio_root "$AUDIO_ROOT" \
+    --output_dir "$SPEAKER_DATA_DIR" \
+    --speaker    "$SPEAKER"
+ok "Speaker audio ready at $SPEAKER_DATA_DIR"
+
+# ── Step 2: Create train_raw.jsonl ──────────────────────────────────────────
+info "Step 2 / 4 — Creating train_raw.jsonl …"
+
+if [[ ! -f "$REF_AUDIO" ]]; then
+    echo ""
+    echo "⚠  Reference audio not found at: $REF_AUDIO"
+    echo "   Please place your reference WAV there before running this step."
+    echo "   Example:"
+    echo "     mkdir -p /kaggle/working/ref_audio"
+    echo "     cp /kaggle/input/<dataset>/some_ref.wav $REF_AUDIO"
+    echo ""
+    exit 1
+fi
+
+"$PYTHON" "$ROOT_DIR/scripts/create_finetune_jsonl.py" \
+    --csv_path  "$CSV_PATH" \
+    --audio_dir "$SPEAKER_DATA_DIR" \
+    --ref_audio "$REF_AUDIO" \
+    --output    "$RAW_JSONL" \
+    --speaker   "$SPEAKER"
+ok "JSONL created at $RAW_JSONL"
+
+# ── Step 3: Encode audio codes ──────────────────────────────────────────────
+info "Step 3 / 4 — Encoding audio codes (prepare_data.py) …"
+"$PYTHON" "$ROOT_DIR/finetuning/prepare_data.py" \
+    --device "$DEVICE" \
+    --tokenizer_model_path "$TOKENIZER_MODEL" \
+    --input_jsonl  "$RAW_JSONL" \
+    --output_jsonl "$TRAIN_JSONL"
+ok "Audio codes encoded → $TRAIN_JSONL"
+
+# ── Step 4: Fine-tune ───────────────────────────────────────────────────────
+info "Step 4 / 4 — Fine-tuning the model …"
+cd "$ROOT_DIR/finetuning"
+"$PYTHON" sft_12hz.py \
+    --init_model_path  "$INIT_MODEL" \
+    --output_model_path "$OUTPUT_DIR" \
+    --train_jsonl       "$TRAIN_JSONL" \
+    --batch_size        "$BATCH_SIZE" \
+    --lr                "$LR" \
+    --num_epochs        "$EPOCHS" \
+    --speaker_name      "$SPEAKER_NAME"
+cd "$ROOT_DIR"
+ok "Fine-tuning complete — checkpoints at $OUTPUT_DIR"
+
+echo ""
+echo "=========================================="
+echo " All done!  Checkpoints saved to:"
+echo "   $OUTPUT_DIR/checkpoint-epoch-*"
+echo ""
+echo " Quick inference test:"
+echo "   source $ROOT_DIR/miniconda3/bin/activate $ENV_NAME"
+echo "   python -c \""
+echo "     import torch, soundfile as sf"
+echo "     from qwen_tts import Qwen3TTSModel"
+echo "     tts = Qwen3TTSModel.from_pretrained("
+echo "         '$OUTPUT_DIR/checkpoint-epoch-$((EPOCHS-1))',"
+echo "         device_map='$DEVICE',"
+echo "         dtype=torch.bfloat16,"
+echo "         attn_implementation='flash_attention_2',"
+echo "     )"
+echo "     wavs, sr = tts.generate_custom_voice("
+echo "         text='Hello world',"
+echo "         speaker='$SPEAKER_NAME',"
+echo "     )"
+echo "     sf.write('output.wav', wavs[0], sr)"
+echo "   \""
+echo "=========================================="
