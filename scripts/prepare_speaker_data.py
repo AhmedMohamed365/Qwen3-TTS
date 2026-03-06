@@ -137,7 +137,15 @@ def main() -> None:
         dst_name = os.path.basename(rel_path)
         dst_path = os.path.join(args.output_dir, dst_name)
 
-        preprocess_audio(src_path, dst_path, target_sr=24000)
+        try:
+            preprocess_audio(src_path, dst_path, target_sr=24000)
+        except subprocess.CalledProcessError as exc:
+            print(
+                f"  ⚠ Failed to preprocess {src_path}: {exc}. "
+                "Common causes: corrupted audio file or missing codec support.",
+            )
+            skipped += 1
+            continue
         processed_files.append(dst_path)
 
     print(f"✓ Preprocessed {len(processed_files)} files → {args.output_dir}")

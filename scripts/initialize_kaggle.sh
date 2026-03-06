@@ -39,6 +39,9 @@ else
 fi
 
 # ── 2. Accept conda ToS (required for newer conda versions) ───────────────────
+# Newer conda versions require explicit ToS acceptance before any channel can be
+# used.  The || true fallback keeps the script working on older conda builds
+# that do not have the `tos` sub-command.
 "$CONDA" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main 2>/dev/null || true
 "$CONDA" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r   2>/dev/null || true
 
