@@ -96,13 +96,13 @@ def main() -> None:
     parser.add_argument(
         "--fraction",
         type=float,
-        default=0.1,
+        default=0.15,
         help="Fraction of speaker rows to process (0.0 to 1.0).",
     )
     parser.add_argument(
         "--num_samples",
         type=int,
-        default=100,
+        default=200,
         help="Number of speaker rows to sample (overrides fraction if set).",
     )
     parser.add_argument(
