@@ -29,7 +29,7 @@ CSV_PATH="${CSV_PATH:-/kaggle/input/${DATASET_NAME}/train.csv}"
 AUDIO_ROOT="${AUDIO_ROOT:-/kaggle/input/${DATASET_NAME}}"
 SPEAKER="${SPEAKER:-Speaker1}"
 
-SPEAKER_DATA_DIR="${SPEAKER_DATA_DIR:-/kaggle/working/speaker_data}"
+SPEAKER_DATA_DIR="${SPEAKER_DATA_DIR:-/kaggle/working/processed_data}"
 REF_AUDIO="${REF_AUDIO:-/kaggle/working/ref_audio/ref.wav}"
 
 RAW_JSONL="${RAW_JSONL:-/kaggle/working/train_raw.jsonl}"
@@ -58,6 +58,7 @@ info() { echo -e "${YELLOW}▶ $*${NC}"; }
 
 # ── Step 1: Filter & preprocess Speaker1 audio ──────────────────────────────
 info "Step 1 / 4 — Filtering & preprocessing audio for '${SPEAKER}' …"
+mkdir -p "$SPEAKER_DATA_DIR"
 "$PYTHON" "$ROOT_DIR/scripts/prepare_speaker_data.py" \
     --csv_path  "$CSV_PATH" \
     --audio_root "$AUDIO_ROOT" \
@@ -98,6 +99,7 @@ ok "Audio codes encoded → $TRAIN_JSONL"
 
 # ── Step 4: Fine-tune ───────────────────────────────────────────────────────
 info "Step 4 / 4 — Fine-tuning the model …"
+mkdir -p "$OUTPUT_DIR"
 cd "$ROOT_DIR/finetuning"
 "$PYTHON" sft_12hz.py \
     --init_model_path  "$INIT_MODEL" \
