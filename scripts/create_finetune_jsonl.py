@@ -4,7 +4,7 @@
 #
 # Generates the train_raw.jsonl required by the Qwen3-TTS finetuning pipeline.
 #
-# Reads the original train.csv to get the transcript (ShowName column) for each
+# Reads the original train.csv to get the transcript (ProcessedText column) for each
 # Speaker1 segment, then pairs it with the preprocessed WAV in --audio_dir and
 # a single reference audio file (--ref_audio).
 #
@@ -70,7 +70,7 @@ def main() -> None:
     df = pd.read_csv(args.csv_path)
     df.columns = df.columns.str.strip()
 
-    required = {"FileName", "ShowName", "Speaker"}
+    required = {"FileName", "ProcessedText", "Speaker"}
     if not required.issubset(set(df.columns)):
         print(
             f"ERROR: CSV must contain columns {required}. Found: {list(df.columns)}",
@@ -99,7 +99,7 @@ def main() -> None:
             skipped += 1
             continue
 
-        text = str(row["ShowName"]).strip()
+        text = str(row["ProcessedText"]).strip()
         if not text:
             skipped += 1
             continue
