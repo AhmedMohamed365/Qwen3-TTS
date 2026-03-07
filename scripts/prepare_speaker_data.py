@@ -94,6 +94,12 @@ def main() -> None:
         default=0.1,
         help="Fraction of speaker rows to process (0.0 to 1.0).",
     )
+    parser.add_argument(
+        "--num_samples",
+        type=int,
+        default=100,
+        help="Number of speaker rows to sample (overrides fraction if set).",
+    )    
     args = parser.parse_args()
 
     # ------------------------------------------------------------------
@@ -126,8 +132,11 @@ def main() -> None:
         print("WARNING: No rows matched – nothing to do.", file=sys.stderr)
         sys.exit(0)
 
-    # Sample the fraction
-    if args.fraction < 1.0:
+    # Sample the fraction or num_samples
+    if args.num_samples is not None:
+        speaker_df = speaker_df.sample(n=min(args.num_samples, len(speaker_df)), random_state=42)
+        print(f"✓ Sampled {len(speaker_df)} rows.")
+    elif args.fraction < 1.0:
         speaker_df = speaker_df.sample(frac=args.fraction, random_state=42)
         print(f"✓ Sampled {len(speaker_df)} rows ({args.fraction*100:.0f}%).")
 

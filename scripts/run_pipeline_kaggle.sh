@@ -68,7 +68,7 @@ mkdir -p "$SPEAKER_DATA_DIR"
     --audio_root "$AUDIO_ROOT" \
     --output_dir "$SPEAKER_DATA_DIR" \
     --speaker    "$SPEAKER" \
-    --fraction   0.1
+    --num_samples 100
 ok "Speaker audio ready at $SPEAKER_DATA_DIR"
 
 # ── Step 2: Create train_raw.jsonl ──────────────────────────────────────────

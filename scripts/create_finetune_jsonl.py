@@ -98,6 +98,10 @@ def main() -> None:
         print("WARNING: No rows matched – nothing to write.", file=sys.stderr)
         sys.exit(0)
 
+    # Sample to limit to 100 records
+    speaker_df = speaker_df.sample(n=100, random_state=42)
+    print(f"✓ Sampled 100 rows for JSONL.")
+
     # ------------------------------------------------------------------
     # 2. Build JSONL entries
     # ------------------------------------------------------------------
@@ -131,13 +135,10 @@ def main() -> None:
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as f:
-        samples_written = 0
         for entry in entries:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-            samples_written += 1
-            if samples_written % 100 == 0:
-                print(f"  ✓ Written {samples_written} entries…")
-                break
+            
+                # break
 
     print(f"✓ Wrote {len(entries)} entries → {args.output}")
     if skipped:
