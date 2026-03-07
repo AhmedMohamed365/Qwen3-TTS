@@ -23,7 +23,7 @@ set -euo pipefail
 # ── Configurable paths ───────────────────────────────────────────────────────
 ROOT_DIR="${ROOT_DIR:-.}"
 ENV_NAME="${ENV_NAME:-qwen_tts_env}"
-DATASET_NAME="${DATASET_NAME:-my-dataset}"
+DATASET_NAME="${DATASET_NAME:-datasets/sdaiancai/sada2022}"
 
 CSV_PATH="${CSV_PATH:-/kaggle/input/${DATASET_NAME}/train.csv}"
 AUDIO_ROOT="${AUDIO_ROOT:-/kaggle/input/${DATASET_NAME}}"
