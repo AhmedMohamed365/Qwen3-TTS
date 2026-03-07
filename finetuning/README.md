@@ -56,6 +56,19 @@ python sft_12hz.py \
   --speaker_name speaker_test
 ```
 
+If you fine-tune on a language that is not present in the original checkpoint metadata, add it when exporting the checkpoint config. For example, to keep the built-in 10 languages and also enable Arabic for the fine-tuned speaker:
+
+```bash
+python sft_12hz.py \
+  --init_model_path Qwen/Qwen3-TTS-12Hz-1.7B-Base \
+  --output_model_path output \
+  --train_jsonl train_with_codes.jsonl \
+  --speaker_name speaker_ar \
+  --add_language arabic=2048
+```
+
+`--add_language` only updates the saved `talker_config.codec_language_id` metadata in the fine-tuned checkpoint, so choose an unused language id from your base model family. This makes `generate_custom_voice(..., language="Arabic")` accept Arabic alongside the original supported languages after you fine-tune on Arabic text/audio data.
+
 Checkpoints will be written to:
 - `output/checkpoint-epoch-0`
 - `output/checkpoint-epoch-1`
