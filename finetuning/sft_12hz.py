@@ -20,6 +20,7 @@ import shutil
 
 import torch
 from accelerate import Accelerator
+from config_utils import build_finetuned_config, parse_added_languages
 from dataset import TTSDataset
 from qwen_tts.inference.qwen3_tts_model import Qwen3TTSModel
 from safetensors.torch import save_file
@@ -52,11 +53,20 @@ def train():
     parser.add_argument("--lr", type=float, default=2e-5)
     parser.add_argument("--num_epochs", type=int, default=3)
     parser.add_argument("--speaker_name", type=str, default="speaker_test")
+    parser.add_argument(
+        "--add_language",
+        action="append",
+        default=[],
+        help="Add language support to the saved checkpoint config using NAME=ID, e.g. arabic=2048. Repeat for multiple languages.",
+    )
     parser.add_argument("--attn_implementation", type=str, default=_ATTN_IMPL,
                         help="Attention implementation: flash_attention_2 or sdpa")
     args = parser.parse_args()
 
     print(f"▶ Using attention implementation: {args.attn_implementation}")
+    added_languages = parse_added_languages(args.add_language)
+    if added_languages:
+        print(f"▶ Extra language ids for saved checkpoint: {added_languages}")
 
     accelerator = Accelerator(gradient_accumulation_steps=4, mixed_precision="bf16", log_with="tensorboard")
 
@@ -150,15 +160,12 @@ def train():
             output_config_file = os.path.join(output_dir, "config.json")
             with open(input_config_file, 'r', encoding='utf-8') as f:
                 config_dict = json.load(f)
-            config_dict["tts_model_type"] = "custom_voice"
-            talker_config = config_dict.get("talker_config", {})
-            talker_config["spk_id"] = {
-                args.speaker_name: 3000
-            }
-            talker_config["spk_is_dialect"] = {
-                args.speaker_name: False
-            }
-            config_dict["talker_config"] = talker_config
+            config_dict = build_finetuned_config(
+                config_dict=config_dict,
+                speaker_name=args.speaker_name,
+                speaker_id=3000,
+                added_languages=added_languages,
+            )
 
             with open(output_config_file, 'w', encoding='utf-8') as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
