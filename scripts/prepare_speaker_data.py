@@ -3,8 +3,9 @@
 # prepare_speaker_data.py
 #
 # Reads train.csv from a Kaggle input dataset, filters rows for a target
-# speaker (default: "Speaker1"), copies the matching audio segments to
-# /kaggle/working/speaker_data/, and preprocesses them to mono 24 kHz WAV.
+# speaker (default: "Speaker1"), extracts the matching audio segments using
+# SegmentStart / SegmentEnd columns, and converts them to mono 24 kHz WAV
+# in /kaggle/working/speaker_data/.
 #
 # Usage (from a Kaggle notebook cell):
 #   !source ./miniconda3/bin/activate qwen_tts_env && \
@@ -16,50 +17,52 @@
 # =============================================================================
 import argparse
 import os
-import shutil
-import subprocess
 import sys
 
+import librosa
 import pandas as pd
+import soundfile as sf
 
 
-def preprocess_audio(src: str, dst: str, target_sr: int = 24000) -> None:
-    """Convert *src* to mono, 24 kHz WAV and write to *dst*.
+def segment_filename(original_filename: str, start: float, end: float) -> str:
+    """Return a unique output filename derived from the source file and segment times.
 
-    Uses ``ffmpeg`` which is available on Kaggle after system-dep install.
-    Falls back to ``sox`` if ffmpeg is not found.
+    >>> segment_filename("audio.wav", 1.234, 5.678)
+    'audio_1234_5678.wav'
+    """
+    stem = os.path.splitext(os.path.basename(original_filename))[0]
+    start_ms = int(round(float(start) * 1000))
+    end_ms = int(round(float(end) * 1000))
+    return f"{stem}_{start_ms}_{end_ms}.wav"
+
+
+def extract_segment(
+    src: str,
+    dst: str,
+    start: float,
+    end: float,
+    target_sr: int = 24000,
+) -> None:
+    """Extract a segment from *src* (start–end in seconds), convert to mono 24 kHz WAV.
+
+    Uses ``librosa`` for loading/resampling and ``soundfile`` for writing.
     """
     os.makedirs(os.path.dirname(dst), exist_ok=True)
 
-    # Prefer ffmpeg – it is faster and widely available on Kaggle
-    try:
-        subprocess.run(
-            [
-                "ffmpeg", "-y",
-                "-i", src,
-                "-ac", "1",           # mono
-                "-ar", str(target_sr), # 24 kHz
-                "-sample_fmt", "s16",  # 16-bit PCM
-                dst,
-            ],
-            check=True,
-            capture_output=True,
-        )
-        return
-    except FileNotFoundError:
-        pass  # ffmpeg not on PATH – try sox
-
-    # Fallback: sox
-    subprocess.run(
-        ["sox", src, "-r", str(target_sr), "-c", "1", "-b", "16", dst],
-        check=True,
-        capture_output=True,
+    audio, sr = librosa.load(
+        src, sr=None, mono=True,
+        offset=start, duration=end - start,
     )
+
+    if sr != target_sr:
+        audio = librosa.resample(y=audio, orig_sr=sr, target_sr=target_sr)
+
+    sf.write(dst, audio, target_sr, subtype="PCM_16")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Filter train.csv for a target speaker, copy & preprocess audio.",
+        description="Filter train.csv for a target speaker, extract & preprocess audio segments.",
     )
     parser.add_argument(
         "--csv_path",
@@ -96,7 +99,7 @@ def main() -> None:
     # Normalise column names (strip whitespace)
     df.columns = df.columns.str.strip()
 
-    expected_cols = {"FileName", "Speaker"}
+    expected_cols = {"FileName", "Speaker", "SegmentStart", "SegmentEnd"}
     if not expected_cols.issubset(set(df.columns)):
         print(
             f"ERROR: CSV must contain columns {expected_cols}. "
@@ -118,7 +121,7 @@ def main() -> None:
         sys.exit(0)
 
     # ------------------------------------------------------------------
-    # 3. Copy & preprocess each audio file
+    # 3. Extract & preprocess each audio segment
     # ------------------------------------------------------------------
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -133,24 +136,26 @@ def main() -> None:
             skipped += 1
             continue
 
-        # Flatten into output_dir keeping only the base filename
-        dst_name = os.path.basename(rel_path)
+        start = float(row["SegmentStart"])
+        end = float(row["SegmentEnd"])
+
+        dst_name = segment_filename(rel_path, start, end)
         dst_path = os.path.join(args.output_dir, dst_name)
 
         try:
-            preprocess_audio(src_path, dst_path, target_sr=24000)
-        except subprocess.CalledProcessError as exc:
+            extract_segment(src_path, dst_path, start, end, target_sr=24000)
+        except Exception as exc:
             print(
-                f"  ⚠ Failed to preprocess {src_path}: {exc}. "
-                "Common causes: corrupted audio file or missing codec support.",
+                f"  ⚠ Failed to extract segment {src_path} "
+                f"[{start}–{end}]: {exc}",
             )
             skipped += 1
             continue
         processed_files.append(dst_path)
 
-    print(f"✓ Preprocessed {len(processed_files)} files → {args.output_dir}")
+    print(f"✓ Preprocessed {len(processed_files)} segments → {args.output_dir}")
     if skipped:
-        print(f"  ⚠ Skipped {skipped} files (not found on disk).")
+        print(f"  ⚠ Skipped {skipped} segments.")
 
 
 if __name__ == "__main__":

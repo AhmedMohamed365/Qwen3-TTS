@@ -4,9 +4,10 @@
 #
 # Generates the train_raw.jsonl required by the Qwen3-TTS finetuning pipeline.
 #
-# Reads the original train.csv to get the transcript (ProcessedText column) for each
-# Speaker1 segment, then pairs it with the preprocessed WAV in --audio_dir and
-# a single reference audio file (--ref_audio).
+# Reads the original train.csv to get the transcript (ProcessedText column) and
+# segment timing (SegmentStart / SegmentEnd) for each Speaker1 segment, then
+# pairs it with the preprocessed WAV in --audio_dir and a single reference
+# audio file (--ref_audio).
 #
 # Output: a JSONL file where each line is:
 #   {"audio": "<path>", "text": "<transcript>", "ref_audio": "<ref_path>"}
@@ -25,6 +26,17 @@ import os
 import sys
 
 import pandas as pd
+
+
+def segment_filename(original_filename: str, start: float, end: float) -> str:
+    """Return a unique output filename derived from the source file and segment times.
+
+    Must match the naming convention in ``prepare_speaker_data.py``.
+    """
+    stem = os.path.splitext(os.path.basename(original_filename))[0]
+    start_ms = int(round(float(start) * 1000))
+    end_ms = int(round(float(end) * 1000))
+    return f"{stem}_{start_ms}_{end_ms}.wav"
 
 
 def main() -> None:
@@ -70,7 +82,7 @@ def main() -> None:
     df = pd.read_csv(args.csv_path)
     df.columns = df.columns.str.strip()
 
-    required = {"FileName", "ProcessedText", "Speaker"}
+    required = {"FileName", "ProcessedText", "Speaker", "SegmentStart", "SegmentEnd"}
     if not required.issubset(set(df.columns)):
         print(
             f"ERROR: CSV must contain columns {required}. Found: {list(df.columns)}",
@@ -92,7 +104,9 @@ def main() -> None:
     entries: list[dict] = []
     skipped = 0
     for _, row in speaker_df.iterrows():
-        base_name = os.path.basename(str(row["FileName"]).strip())
+        start = float(row["SegmentStart"])
+        end = float(row["SegmentEnd"])
+        base_name = segment_filename(str(row["FileName"]).strip(), start, end)
         audio_path = os.path.join(args.audio_dir, base_name)
 
         if not os.path.isfile(audio_path):
