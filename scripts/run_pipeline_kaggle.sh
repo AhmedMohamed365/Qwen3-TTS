@@ -20,8 +20,12 @@
 # =============================================================================
 set -euo pipefail
 
+# ── Download code to /kaggle/temp ────────────────────────────────────────────
+mkdir -p /kaggle/temp
+git clone https://github.com/QwenLM/Qwen3-TTS.git /kaggle/temp/Qwen3-TTS
+
 # ── Configurable paths ───────────────────────────────────────────────────────
-ROOT_DIR="${ROOT_DIR:-.}"
+ROOT_DIR="${ROOT_DIR:-/kaggle/temp/Qwen3-TTS}"
 ENV_NAME="${ENV_NAME:-qwen_tts_env}"
 DATASET_NAME="${DATASET_NAME:-datasets/sdaiancai/sada2022}"
 
@@ -29,12 +33,12 @@ CSV_PATH="${CSV_PATH:-/kaggle/input/${DATASET_NAME}/train.csv}"
 AUDIO_ROOT="${AUDIO_ROOT:-/kaggle/input/${DATASET_NAME}}"
 SPEAKER="${SPEAKER:-Speaker1}"
 
-SPEAKER_DATA_DIR="${SPEAKER_DATA_DIR:-/kaggle/working/processed_data}"
-REF_AUDIO="${REF_AUDIO:-/kaggle/working/ref_audio/ref.wav}"
+SPEAKER_DATA_DIR="${SPEAKER_DATA_DIR:-/kaggle/temp/processed_data}"
+REF_AUDIO="${REF_AUDIO:-/kaggle/temp/ref_audio/ref.wav}"
 
-RAW_JSONL="${RAW_JSONL:-/kaggle/working/train_raw.jsonl}"
-TRAIN_JSONL="${TRAIN_JSONL:-/kaggle/working/train_with_codes.jsonl}"
-OUTPUT_DIR="${OUTPUT_DIR:-/kaggle/working/output}"
+RAW_JSONL="${RAW_JSONL:-/kaggle/temp/train_raw.jsonl}"
+TRAIN_JSONL="${TRAIN_JSONL:-/kaggle/temp/train_with_codes.jsonl}"
+OUTPUT_DIR="${OUTPUT_DIR:-/kaggle/output}"
 
 DEVICE="${DEVICE:-cuda:0}"
 TOKENIZER_MODEL="${TOKENIZER_MODEL:-Qwen/Qwen3-TTS-Tokenizer-12Hz}"
@@ -63,7 +67,8 @@ mkdir -p "$SPEAKER_DATA_DIR"
     --csv_path  "$CSV_PATH" \
     --audio_root "$AUDIO_ROOT" \
     --output_dir "$SPEAKER_DATA_DIR" \
-    --speaker    "$SPEAKER"
+    --speaker    "$SPEAKER" \
+    --fraction   0.1
 ok "Speaker audio ready at $SPEAKER_DATA_DIR"
 
 # ── Step 2: Create train_raw.jsonl ──────────────────────────────────────────
@@ -74,7 +79,7 @@ if [[ ! -f "$REF_AUDIO" ]]; then
     echo "⚠  Reference audio not found at: $REF_AUDIO"
     echo "   Please place your reference WAV there before running this step."
     echo "   Example:"
-    echo "     mkdir -p /kaggle/working/ref_audio"
+    echo "     mkdir -p /kaggle/temp/ref_audio"
     echo "     cp /kaggle/input/<dataset>/some_ref.wav $REF_AUDIO"
     echo ""
     exit 1

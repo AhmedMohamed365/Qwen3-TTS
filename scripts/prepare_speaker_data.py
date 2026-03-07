@@ -79,7 +79,7 @@ def main() -> None:
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/kaggle/working/speaker_data",
+        default="/kaggle/temp/processed_data",
         help="Directory where preprocessed WAV files will be written.",
     )
     parser.add_argument(
@@ -87,6 +87,12 @@ def main() -> None:
         type=str,
         default="Speaker1",
         help="Target speaker label (substring match against the Speaker column).",
+    )
+    parser.add_argument(
+        "--fraction",
+        type=float,
+        default=0.1,
+        help="Fraction of speaker rows to process (0.0 to 1.0).",
     )
     args = parser.parse_args()
 
@@ -119,6 +125,11 @@ def main() -> None:
     if speaker_df.empty:
         print("WARNING: No rows matched – nothing to do.", file=sys.stderr)
         sys.exit(0)
+
+    # Sample the fraction
+    if args.fraction < 1.0:
+        speaker_df = speaker_df.sample(frac=args.fraction, random_state=42)
+        print(f"✓ Sampled {len(speaker_df)} rows ({args.fraction*100:.0f}%).")
 
     # ------------------------------------------------------------------
     # 3. Extract & preprocess each audio segment
