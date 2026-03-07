@@ -79,7 +79,7 @@ def main() -> None:
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="/kaggle/temp/processed_data",
+        default="/kaggle/working/speaker_data",
         help="Directory where preprocessed WAV files will be written.",
     )
     parser.add_argument(
