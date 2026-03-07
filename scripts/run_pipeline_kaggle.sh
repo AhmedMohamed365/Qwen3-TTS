@@ -20,12 +20,12 @@
 # =============================================================================
 set -euo pipefail
 
-# ── Download code to /kaggle/temp ────────────────────────────────────────────
-mkdir -p /kaggle/temp
-git clone https://github.com/QwenLM/Qwen3-TTS.git /kaggle/temp/Qwen3-TTS
+# ── Download code to /kaggle/working ────────────────────────────────────────────
+mkdir -p /kaggle/working
+git clone https://github.com/QwenLM/Qwen3-TTS.git /kaggle/working/Qwen3-TTS
 
 # ── Configurable paths ───────────────────────────────────────────────────────
-ROOT_DIR="${ROOT_DIR:-/kaggle/temp/Qwen3-TTS}"
+ROOT_DIR="${ROOT_DIR:-/kaggle/working/Qwen3-TTS}"
 ENV_NAME="${ENV_NAME:-qwen_tts_env}"
 DATASET_NAME="${DATASET_NAME:-datasets/sdaiancai/sada2022}"
 
@@ -33,11 +33,11 @@ CSV_PATH="${CSV_PATH:-/kaggle/input/${DATASET_NAME}/train.csv}"
 AUDIO_ROOT="${AUDIO_ROOT:-/kaggle/input/${DATASET_NAME}}"
 SPEAKER="${SPEAKER:-Speaker1}"
 
-SPEAKER_DATA_DIR="${SPEAKER_DATA_DIR:-/kaggle/temp/processed_data}"
-REF_AUDIO="${REF_AUDIO:-/kaggle/temp/ref_audio/ref.wav}"
+SPEAKER_DATA_DIR="${SPEAKER_DATA_DIR:-/kaggle/working/processed_data}"
+REF_AUDIO="${REF_AUDIO:-/kaggle/working/ref_audio/ref.wav}"
 
-RAW_JSONL="${RAW_JSONL:-/kaggle/temp/train_raw.jsonl}"
-TRAIN_JSONL="${TRAIN_JSONL:-/kaggle/temp/train_with_codes.jsonl}"
+RAW_JSONL="${RAW_JSONL:-/kaggle/working/train_raw.jsonl}"
+TRAIN_JSONL="${TRAIN_JSONL:-/kaggle/working/train_with_codes.jsonl}"
 OUTPUT_DIR="${OUTPUT_DIR:-/kaggle/output}"
 
 DEVICE="${DEVICE:-cuda:0}"
@@ -79,7 +79,7 @@ if [[ ! -f "$REF_AUDIO" ]]; then
     echo "⚠  Reference audio not found at: $REF_AUDIO"
     echo "   Please place your reference WAV there before running this step."
     echo "   Example:"
-    echo "     mkdir -p /kaggle/temp/ref_audio"
+    echo "     mkdir -p /kaggle/working/ref_audio"
     echo "     cp /kaggle/input/<dataset>/some_ref.wav $REF_AUDIO"
     echo ""
     exit 1
