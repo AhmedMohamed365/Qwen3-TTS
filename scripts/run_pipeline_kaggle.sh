@@ -47,7 +47,7 @@ INIT_MODEL="${INIT_MODEL:-/kaggle/working/Qwen3-TTS/Qwen/Qwen3-TTS-12Hz-0.6B-Bas
 
 BATCH_SIZE="${BATCH_SIZE:-1}"
 LR="${LR:-2e-5}"
-EPOCHS="${EPOCHS:-3}"
+EPOCHS="${EPOCHS:-50}"
 SPEAKER_NAME="${SPEAKER_NAME:-speaker1}"
 
 # ── Resolve conda python ─────────────────────────────────────────────────────
