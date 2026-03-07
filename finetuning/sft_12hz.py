@@ -32,7 +32,12 @@ target_speaker_embedding = None
 # Detect flash-attn availability once at startup
 try:
     import flash_attn  # noqa: F401
-    _ATTN_IMPL = "flash_attention_2"
+    import torch as _torch
+    _cc = _torch.cuda.get_device_capability() if _torch.cuda.is_available() else (0, 0)
+    # flash-attn requires Ampere (compute capability >= 8.0)
+    _ATTN_IMPL = "flash_attention_2" if _cc[0] >= 8 else "sdpa"
+    if _cc[0] < 8:
+        print(f"⚠ GPU compute capability {_cc[0]}.{_cc[1]} < 8.0 — flash-attn not supported, using sdpa")
 except ImportError:
     _ATTN_IMPL = "sdpa"
 
