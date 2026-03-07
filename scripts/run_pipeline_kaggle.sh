@@ -41,6 +41,7 @@ TRAIN_JSONL="${TRAIN_JSONL:-/kaggle/working/train_with_codes.jsonl}"
 OUTPUT_DIR="${OUTPUT_DIR:-/kaggle/output}"
 
 DEVICE="${DEVICE:-cuda:0}"
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 TOKENIZER_MODEL="${TOKENIZER_MODEL:-Qwen/Qwen3-TTS-Tokenizer-12Hz}"
 INIT_MODEL="${INIT_MODEL:-Qwen/Qwen3-TTS-12Hz-1.7B-Base}"
 
@@ -68,7 +69,8 @@ mkdir -p "$SPEAKER_DATA_DIR"
     --audio_root "$AUDIO_ROOT" \
     --output_dir "$SPEAKER_DATA_DIR" \
     --speaker    "$SPEAKER" \
-    --num_samples 100
+    --num_samples 100 \
+    --max_duration 15
 ok "Speaker audio ready at $SPEAKER_DATA_DIR"
 
 # ── Step 2: Create train_raw.jsonl ──────────────────────────────────────────
@@ -99,7 +101,8 @@ info "Step 3 / 4 — Encoding audio codes (prepare_data.py) …"
     --device "$DEVICE" \
     --tokenizer_model_path "$TOKENIZER_MODEL" \
     --input_jsonl  "$RAW_JSONL" \
-    --output_jsonl "$TRAIN_JSONL"
+    --output_jsonl "$TRAIN_JSONL" \
+    --batch_infer_num 1
 ok "Audio codes encoded → $TRAIN_JSONL"
 
 # ── Step 4: Fine-tune ───────────────────────────────────────────────────────

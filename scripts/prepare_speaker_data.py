@@ -54,6 +54,11 @@ def extract_segment(
         offset=start, duration=end - start,
     )
 
+    # caller may have already capped duration via max_duration arg, but guard here too
+    max_samples = int((end - start) * (sr if sr else target_sr))
+    if len(audio) > max_samples:
+        audio = audio[:max_samples]
+
     if sr != target_sr:
         audio = librosa.resample(y=audio, orig_sr=sr, target_sr=target_sr)
 
@@ -99,7 +104,13 @@ def main() -> None:
         type=int,
         default=100,
         help="Number of speaker rows to sample (overrides fraction if set).",
-    )    
+    )
+    parser.add_argument(
+        "--max_duration",
+        type=float,
+        default=15.0,
+        help="Maximum segment duration in seconds. Longer segments are truncated to this length.",
+    )
     args = parser.parse_args()
 
     # ------------------------------------------------------------------
@@ -158,6 +169,10 @@ def main() -> None:
 
         start = float(row["SegmentStart"])
         end = float(row["SegmentEnd"])
+
+        # cap segment length to avoid huge padding tensors during GPU encoding
+        if args.max_duration is not None and (end - start) > args.max_duration:
+            end = start + args.max_duration
 
         dst_name = segment_filename(rel_path, start, end)
         dst_path = os.path.join(args.output_dir, dst_name)

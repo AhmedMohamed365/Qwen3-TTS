@@ -17,9 +17,10 @@
 import argparse
 import json
 
+import torch
 from qwen_tts import Qwen3TTSTokenizer
 
-BATCH_INFER_NUM = 32
+BATCH_INFER_NUM = 1
 
 def main():
     parser = argparse.ArgumentParser()
@@ -27,7 +28,10 @@ def main():
     parser.add_argument("--tokenizer_model_path", type=str, default="Qwen/Qwen3-TTS-Tokenizer-12Hz")
     parser.add_argument("--input_jsonl", type=str, required=True)
     parser.add_argument("--output_jsonl", type=str, required=True)
+    parser.add_argument("--batch_infer_num", type=int, default=BATCH_INFER_NUM,
+                        help="Number of audio files to encode per batch. Reduce if OOM.")
     args = parser.parse_args()
+    batch_infer_num = args.batch_infer_num
 
     tokenizer_12hz = Qwen3TTSTokenizer.from_pretrained(
         args.tokenizer_model_path,
@@ -45,13 +49,14 @@ def main():
         batch_lines.append(line)
         batch_audios.append(line['audio'])
 
-        if len(batch_lines) >= BATCH_INFER_NUM:
+        if len(batch_lines) >= batch_infer_num:
             enc_res = tokenizer_12hz.encode(batch_audios)
             for code, line in zip(enc_res.audio_codes, batch_lines):
                 line['audio_codes'] = code.cpu().tolist()
                 final_lines.append(line)
             batch_lines.clear()
             batch_audios.clear()
+            torch.cuda.empty_cache()
 
     if len(batch_audios) > 0:
         enc_res = tokenizer_12hz.encode(batch_audios)
@@ -60,6 +65,7 @@ def main():
             final_lines.append(line)
         batch_lines.clear()
         batch_audios.clear()
+        torch.cuda.empty_cache()
 
     final_lines = [json.dumps(line, ensure_ascii=False) for line in final_lines]
 
