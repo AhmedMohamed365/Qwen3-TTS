@@ -86,6 +86,12 @@ info "Installing training deps (transformers, peft, datasets, accelerate …) �
 "$PIP" install --quiet torchcodec 2>/dev/null || true
 ok "Training deps installed"
 
+# ── 6b. Install flash-attn (for faster attention on GPUs) ────────────────────
+info "Installing flash-attn (prebuilt wheel, may take a minute) …"
+"$PIP" install --quiet flash-attn --no-build-isolation 2>/dev/null \
+    && ok "flash-attn installed" \
+    || echo "  ⚠ flash-attn build failed — will fall back to sdpa in training"
+
 # ── 7. Install qwen-tts package (this repo) ──────────────────────────────────
 info "Installing qwen-tts from local repo …"
 "$PIP" install --quiet -e "$ROOT_DIR"

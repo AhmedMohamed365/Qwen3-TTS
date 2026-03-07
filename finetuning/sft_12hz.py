@@ -28,6 +28,14 @@ from torch.utils.data import DataLoader
 from transformers import AutoConfig
 
 target_speaker_embedding = None
+
+# Detect flash-attn availability once at startup
+try:
+    import flash_attn  # noqa: F401
+    _ATTN_IMPL = "flash_attention_2"
+except ImportError:
+    _ATTN_IMPL = "sdpa"
+
 def train():
     global target_speaker_embedding
 
@@ -39,7 +47,11 @@ def train():
     parser.add_argument("--lr", type=float, default=2e-5)
     parser.add_argument("--num_epochs", type=int, default=3)
     parser.add_argument("--speaker_name", type=str, default="speaker_test")
+    parser.add_argument("--attn_implementation", type=str, default=_ATTN_IMPL,
+                        help="Attention implementation: flash_attention_2 or sdpa")
     args = parser.parse_args()
+
+    print(f"▶ Using attention implementation: {args.attn_implementation}")
 
     accelerator = Accelerator(gradient_accumulation_steps=4, mixed_precision="bf16", log_with="tensorboard")
 
@@ -48,7 +60,7 @@ def train():
     qwen3tts = Qwen3TTSModel.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
+        attn_implementation=args.attn_implementation,
     )
     config = AutoConfig.from_pretrained(MODEL_PATH)
 
