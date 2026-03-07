@@ -21,8 +21,8 @@
 set -euo pipefail
 
 # ── Download code to /kaggle/working ────────────────────────────────────────────
-mkdir -p /kaggle/working
-git clone https://github.com/QwenLM/Qwen3-TTS.git /kaggle/working/Qwen3-TTS
+# mkdir -p /kaggle/working
+# git clone https://github.com/QwenLM/Qwen3-TTS.git /kaggle/working/Qwen3-TTS
 
 # ── Configurable paths ───────────────────────────────────────────────────────
 ROOT_DIR="${ROOT_DIR:-/kaggle/working/Qwen3-TTS}"
