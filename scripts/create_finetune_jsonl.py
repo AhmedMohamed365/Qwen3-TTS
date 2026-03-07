@@ -29,7 +29,7 @@ import pandas as pd
 
 
 def segment_filename(original_filename: str, start: float, end: float) -> str:
-    """Return a unique output filename derived from the source file and segment times.
+    """Return an output filename derived from the source file and segment times.
 
     Must match the naming convention in ``prepare_speaker_data.py``.
     """

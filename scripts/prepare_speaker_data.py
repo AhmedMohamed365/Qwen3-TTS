@@ -25,7 +25,7 @@ import soundfile as sf
 
 
 def segment_filename(original_filename: str, start: float, end: float) -> str:
-    """Return a unique output filename derived from the source file and segment times.
+    """Return an output filename derived from the source file and segment times.
 
     >>> segment_filename("audio.wav", 1.234, 5.678)
     'audio_1234_5678.wav'
