@@ -43,7 +43,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-/kaggle/output}"
 DEVICE="${DEVICE:-cuda:0}"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 TOKENIZER_MODEL="${TOKENIZER_MODEL:-Qwen/Qwen3-TTS-Tokenizer-12Hz}"
-INIT_MODEL="${INIT_MODEL:-/kaggle/working/Qwen3-TTS/Qwen3-TTS-12Hz-0.6B-Base}"
+INIT_MODEL="${INIT_MODEL:-/kaggle/working/Qwen3-TTS/Qwen/Qwen3-TTS-12Hz-0.6B-Base}"
 
 BATCH_SIZE="${BATCH_SIZE:-1}"
 LR="${LR:-2e-5}"
