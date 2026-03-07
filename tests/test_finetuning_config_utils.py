@@ -51,6 +51,28 @@ class BuildFinetunedConfigTest(unittest.TestCase):
         )
         self.assertEqual(original["talker_config"]["codec_language_id"], {"english": 100, "chinese": 101})
 
+    def test_keeps_existing_languages_when_no_new_language_is_provided(self):
+        original = {
+            "tts_model_type": "base",
+            "talker_config": {
+                "codec_language_id": {
+                    "english": 100,
+                    "chinese": 101,
+                },
+            },
+        }
+
+        updated = build_finetuned_config(
+            config_dict=original,
+            speaker_name="speaker_ar",
+            added_languages=None,
+        )
+
+        self.assertEqual(
+            updated["talker_config"]["codec_language_id"],
+            {"english": 100, "chinese": 101},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

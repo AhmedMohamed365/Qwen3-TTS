@@ -40,7 +40,7 @@ def build_finetuned_config(config_dict, speaker_name, speaker_id=3000, added_lan
     }
 
     if added_languages:
-        codec_language_id = dict(talker_config.get("codec_language_id", {}))
+        codec_language_id = talker_config.get("codec_language_id", {})
         codec_language_id.update(added_languages)
         talker_config["codec_language_id"] = codec_language_id
 
